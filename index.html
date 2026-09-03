@@ -97,6 +97,17 @@ table.dur td{padding:9px 0;border-bottom:1px solid var(--line);vertical-align:to
 table.dur td:first-child{padding-right:12px}
 table.dur tr:last-child td{border-bottom:none}
 table.dur a{color:var(--teal-d);cursor:pointer;text-decoration:none}
+.card.haus{border-color:var(--navy);border-width:1.5px}
+[data-theme="dark"] .card.haus{border-color:var(--navy)}
+.card.haus > h3{color:var(--navy)}
+.llreg{border-left:3px solid var(--navy);padding:2px 0 2px 13px;margin-bottom:13px}
+.llreg:last-child{margin-bottom:0}
+.llreg b{display:block;font-size:14.5px;font-weight:600;margin-bottom:4px;line-height:1.35}
+.llmeta{font-size:12.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:12px;margin-top:4px}
+.llmeta span{white-space:nowrap}
+.konflikt{border-left:3px solid var(--maessig);padding:2px 0 2px 13px;margin-bottom:14px}
+.konflikt b{display:block;font-size:13.5px;color:var(--maessig);margin-bottom:5px}
+.stand{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
 .rgwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
 table.rg{border-collapse:separate;border-spacing:0;font-size:12px;min-width:640px}
 table.rg th{font-weight:700;color:var(--muted);font-size:11px;padding:6px 4px;text-align:center;white-space:nowrap}
@@ -1757,6 +1768,232 @@ const RG_AUSNAHMEN = {
  sepsis_unklar:{piptazo:"Im septischen Schock ist die gelbe Bewertung der Grund, ein Carbapenem vorzuziehen; ohne Schock und ohne MRE-Risiko bleibt Pip/Tazo vertretbar."}
 };
 
+/* ---------- Hausinterne Antibiotika-Leitlinie ----------
+   Antibiotika-Leitlinie für Erwachsene, Diakonissen-Stiftungs-Krankenhaus Speyer,
+   erstellt mit MVZ Labor Dr. Limbach & Kollegen GbR.
+   Kapitel mit unterschiedlichem Stand — jeweils am Eintrag vermerkt. */
+
+const LL_META = {
+ titel:"Antibiotika-Leitlinie für Erwachsene — Diakonissen-Stiftungs-Krankenhaus Speyer",
+ herausgeber:"MVZ Labor Dr. Limbach & Kollegen GbR, Limbach Gruppe SE",
+ kapitel:[
+  {name:"Blutstrominfektionen und Sepsis",stand:"14.07.2026"},
+  {name:"Abdominelle Infektionen",stand:"10.09.2024"},
+  {name:"Atemwegsinfektionen",stand:"04.02.2022"},
+  {name:"Harnwegsinfektionen",stand:"11.04.2022"},
+  {name:"Haut- und Weichgewebeinfektionen",stand:"11.06.2019"},
+  {name:"Fieber unbekannter Ursache bei Neutropenie",stand:"11.06.2019"}],
+ hinweis:"Die Hausleitlinie ist die verbindliche Vorgabe. Wo diese App abweicht, ist das an der jeweiligen Stelle begründet — meist durch neuere Evidenz oder durch das Hausresistogramm."
+};
+
+/* Allgemeine Vorgaben aus dem Sepsiskapitel — gelten kapitelübergreifend */
+const LL_ABS = [
+ {titel:"Reevaluation und Deeskalation",text:"Die Notwendigkeit der Antibiotika-Therapie wird am dritten Tag und mindestens alle 48 Stunden reevaluiert und anhand des Antibiogramms deeskaliert."},
+ {titel:"Dosierung in den ersten 24 bis 48 Stunden",text:"Auch bei bekannter Nieren- oder Leberinsuffizienz wird zunächst hochdosiert therapiert. An den Folgetagen wird an eventuelle Organinsuffizienzen angepasst und bei Bedarf per TDM kontrolliert."},
+ {titel:"Applikationsform",text:"Betalaktame als kontinuierliche oder verlängerte Infusion, Aminoglykoside als Bolusinfusion, Fluorchinolone über einen kurzen Zeitraum. Die Initialdosis wird als Kurzinfusion gegeben; die verlängerte Applikation wird über 2 bis 4 Stunden empfohlen."},
+ {titel:"Definition Risikopatient",text:"Patienten mit Beatmung, vorhergehender Antibiotika-Therapie, großem chirurgischem Eingriff oder langem Aufenthalt auf Intensivstation."},
+ {titel:"Zusatzrisiken A bis D bei Sepsis",text:"A) Hohe MRSA-Wahrscheinlichkeit → zusätzlich Vancomycin 2 × 1 g i.v., bei Fokus Atemwege Linezolid 2 × 600 mg i.v. B) Verdacht auf Pilzsepsis (schwere Immunsuppression, hämatoonkologische Grunderkrankung, nach darmchirurgischer Operation, Anastomoseninsuffizienz) → zusätzlich Caspofungin 1 × 50 mg, über 80 kg 1 × 70 mg. C) Verdacht auf katheterassoziierte Infektion → zusätzlich Vancomycin 2 × 1 g i.v. D) Septischer Schock oder Spektrumserweiterung → Kombination anstreben mit Ciprofloxacin 3 × 400 mg i.v. oder Fosfomycin 3 × 5 g i.v."},
+ {titel:"Früherkennung",text:"NEWS2-Score beziehungsweise SOFA-Score, siehe hausinterne SOP Sepsis. Bei Verdacht auf Sepsis umfassende und frühzeitige Diagnostik vor raschem Therapiebeginn."},
+ {titel:"Procalcitonin",text:"Die PCT-gesteuerte Therapie kann eine verkürzte Antibiotika-Therapiedauer ermöglichen — siehe Kapitel „Procalcitonin-gesteuerte Antiinfektiva-Therapie“."},
+ {titel:"Therapiedauer bei Peritonitis — PEG-Stufenmodell",text:"Je lokaler die Infektion begrenzt ist, desto kürzer die Dauer. Stufe 1 (ambulant, ohne Perforation, minimale Peritonitis) 1 Tag · Stufe 2 (frische Perforation, lokalisiert) 3 Tage · Stufe 3 (fortgeschritten oder mit Risikofaktoren) 5 Tage · Stufe 4 (nosokomial, septischer Schock) 7 bis 10 Tage. Ohne Erfolg nach 7 bis 10 Tagen: absetzen und erneut Proben gewinnen."},
+ {titel:"Urindiagnostik",text:"Das ABS-Netzwerk Rhein-Neckar empfiehlt, bei stationären Patienten mit Verdacht auf oberen Harnwegsinfekt auf den Urinstatus mittels Teststreifen ganz zu verzichten. Bei stabilen Patienten mit Katheter Urin-Mikrobiologie abwarten und gezielt nach Antibiogramm behandeln."},
+ {titel:"Erregernachweis ist keine Therapieindikation",text:"Der alleinige Nachweis von Erregern ist für sich noch keine Indikation für eine antibiotische Therapie. Das gilt insbesondere für chronische Wunden, die regelhaft besiedelt sind, auch wenn die Keime multiresistent sind."},
+ {titel:"Deeskalation bei HAP",text:"Bei klinischer Besserung ohne Nachweis eines respiratorischen Pathogens soll auf eine Monotherapie mit dem Betalaktam der Initialkombination deeskaliert werden. Bei Erregernachweis auf gezielte Monotherapie mit schmalem Spektrum. Eine initiale kalkulierte MRSA-Therapie soll beendet werden, wenn kein MRSA nachgewiesen wurde."}
+];
+
+/* Hausempfehlungen je Fokus */
+const LL_FOKUS = {
+ hap_ohne:{kapitel:"Atemwegsinfektionen",stand:"04.02.2022",titel:"HAP/VAP ohne Risikofaktoren für MRE",
+  regime:[{t:"Ampicillin/Sulbactam 3–4 × 2/1 g i.v.",d:"7 Tage",e:"C, starke Empfehlung",q:"PEG 2018, DGP 2017"},
+   {t:"Ceftriaxon 1 × 2 g i.v.",d:"7 Tage",e:"C, starke Empfehlung",q:"PEG 2018, DGP 2017"},
+   {t:"Levofloxacin 2 × 500 mg i.v. — nur bei nachgewiesener Betalaktamallergie",d:"7 Tage",e:"C",q:"DGP 2017"}],
+  hinweise:["Reevaluierung 48 bis 72 Stunden nach Therapiebeginn.","Bei S.-aureus-Bakteriämie im Rahmen der HAP mindestens 14 Tage."]},
+ hap_mre:{kapitel:"Atemwegsinfektionen",stand:"04.02.2022",titel:"HAP/VAP mit Risikofaktoren für MRE",
+  regime:[{t:"Ohne Organdysfunktion, ohne invasive Beatmung: Piperacillin/Tazobactam 3–4 × 4/0,5 g i.v.",d:"7 Tage",e:"B, starke Empfehlung",q:"PEG 2018, DGP 2017"},
+   {t:"Ohne Organdysfunktion: Meropenem 3 × 1–2 g i.v.",d:"7 Tage",e:"B, starke Empfehlung",q:"PEG 2018, DGP 2017"},
+   {t:"Mit Organdysfunktion oder invasiver Beatmung: Piperacillin/Tazobactam 4 × 4/0,5 g ± Ciprofloxacin 3 × 400 mg ± Linezolid 2 × 600 mg",d:"7 Tage",e:"B, starke Empfehlung",q:"PEG 2018, DGP 2017"},
+   {t:"Alternativ: Piperacillin/Tazobactam ± Fosfomycin 3 × 5 g ± Linezolid",d:"7 Tage",e:"B, starke Empfehlung",q:"PEG 2018"},
+   {t:"Alternativ: Meropenem 3 × 2 g ± Ciprofloxacin oder Fosfomycin ± Linezolid",d:"7 Tage",e:"B, starke Empfehlung",q:"PEG 2018, DGP 2017"}],
+  hinweise:["Notwendigkeit der Kombinationstherapie nach 3 Tagen re-evaluieren.","MRE-Risikofaktoren: antimikrobielle Therapie in den letzten 90 Tagen, Hospitalisierung ≥ 5 Tage, Kolonisation durch MRGN oder MRSA, medizinische Versorgung in Süd-/Osteuropa, Afrika, Naher Osten, Asien, septischer Schock oder sepsisassoziierte Organdysfunktion.","Zusätzliche Pseudomonas-Risikofaktoren: strukturelle Lungenerkrankung, bekannte Kolonisation.","Inhalative Therapie bei VAP nur bei Erregern, die nur auf Colistin oder Aminoglykoside empfindlich sind."]},
+ scap:{kapitel:"Atemwegsinfektionen",stand:"04.02.2022",titel:"Schwergradige ambulant erworbene Pneumonie",
+  regime:[{t:"Ohne Pseudomonas-Risiko: Piperacillin/Tazobactam 4 × 4/0,5 g + Clarithromycin 2 × 500 mg",d:"Pip/Tazo 7 Tage, Clarithromycin Tag 1–3",e:"II, A",q:"PEG 2018, DGP 2021"},
+   {t:"Ohne Pseudomonas-Risiko: Ceftriaxon 1 × 2 g + Clarithromycin 2 × 500 mg",d:"Ceftriaxon 7 Tage, Clarithromycin Tag 1–3",e:"II, A",q:"PEG 2018, DGP 2021"},
+   {t:"Mit MRE- oder Pseudomonas-Risiko: Piperacillin/Tazobactam 4 × 4/0,5 g + Ciprofloxacin 3 × 400 mg",d:"7 Tage",e:"II, A",q:"PEG 2018, DGP 2021"},
+   {t:"Mit MRE- oder Pseudomonas-Risiko: Ceftazidim 3 × 2 g + Levofloxacin 2 × 500 mg",d:"7 Tage",e:"k. A.",q:"DGP 2021"},
+   {t:"Levofloxacin 2 × 500 mg — nur bei Betalaktamallergie, keine Monotherapie mit Fluorchinolon bei Sepsis",d:"7 Tage",e:"II, A",q:"modifiziert"}],
+  hinweise:["Erste Antibiotikagabe bei hospitalisierten Patienten < 8 h, bei schwerer Sepsis oder septischem Schock < 1 h.","Nach Ausschluss atypischer Erreger wird das Makrolid nach drei Tagen beendet.","Bei hoher Influenza-Aktivität kann die frühzeitige kalkulierte Gabe von Oseltamivir erfolgen; nach Ausschluss beenden.","MRE sind sehr selten — eine generelle kalkulierte MRE-Therapie wird nicht empfohlen.","Voraussetzung für 7 Tage ist eine mindestens 2-tägige klinische Stabilisierung; bei gesicherter Pseudomonas-Pneumonie 8 bis 15 Tage."]},
+ aspiration:{kapitel:"Atemwegsinfektionen",stand:"04.02.2022",titel:"Aspirationspneumonie, jeglicher Schweregrad",
+  regime:[{t:"Ampicillin/Sulbactam 3–4 × 2/1 g i.v.",d:"5–7 Tage",e:"II, B",q:"DGP 2016"},
+   {t:"Ceftriaxon 1 × 2 g + Clindamycin 3 × 600 mg i.v.",d:"5–7 Tage",e:"II, B",q:"DGP 2016"}],
+  hinweise:["Dysphagiescreening durchführen.","Keine Therapie mit Makroliden notwendig.","Lungenabszess: gleiche Substanzen, Dauer bis zur Ausheilung der Abszedierung."]},
+ pleuraempyem:{kapitel:"Atemwegsinfektionen",stand:"04.02.2022",titel:"Kein eigenes Kapitel — Vorgehen nach Pneumonie und Lungenabszess",
+  regime:[{t:"Lungenabszess: Ampicillin/Sulbactam 3–4 × 2/1 g oder Ceftriaxon 1 × 2 g + Clindamycin 3–4 × 600 mg",d:"bis zur Ausheilung der Abszedierung",e:"II, A",q:"PEG 2018, DGP 2016"}],
+  hinweise:["Für das Pleuraempyem selbst liegt kein eigenes Kapitel der Hausleitlinie vor."]},
+ sepsis_unklar:{kapitel:"Blutstrominfektionen",stand:"14.07.2026",titel:"Sepsis bei unbekanntem Fokus",
+  regime:[{t:"Ambulant erworben: Piperacillin/Tazobactam 4 × 4/0,5 g i.v.",d:"7–10 Tage",e:"—",q:"DSG 2025, modifiziert"},
+   {t:"Nosokomial: Piperacillin/Tazobactam 4 × 4/0,5 g i.v.",d:"7–10 Tage",e:"—",q:"DSG 2025"},
+   {t:"Nosokomial, vor allem bei vorbestehender Antibiose: Meropenem 3 × 2 g i.v.",d:"7–10 Tage",e:"—",q:"PEG 2018, modifiziert"}],
+  hinweise:["Zusatzrisiken A bis D abschätzen (siehe Stewardship-Seite).","Erreger laut Hausleitlinie: S. aureus, Streptokokken, E. coli, Enterokokken, Klebsiella, Pseudomonas, MRSA."]},
+ urosepsis:{kapitel:"Blutstrominfektionen / Harnwegsinfektionen",stand:"14.07.2026 / 11.04.2022",titel:"Sepsis mit Fokus Harnwege, komplizierte Pyelonephritis",
+  regime:[{t:"Sepsis, ambulant erworben: Ceftriaxon 2 × 2 g am ersten Tag, dann 1 × 2 g",d:"5–7 Tage",e:"—",q:"PEG 2018, modifiziert"},
+   {t:"Sepsis, nosokomial erworben: Cefepim 3 × 1–2 g i.v.",d:"7–10 Tage",e:"—",q:"DSG 2025"},
+   {t:"Komplizierte Pyelonephritis, nosokomial oder Versagen der Initialtherapie: Piperacillin/Tazobactam 3 × 4/0,5 g",d:"bis 3–5 Tage nach klinischer Besserung",e:"II, B",q:"modifiziert"},
+   {t:"Komplizierte Pyelonephritis: Meropenem 3 × 1–2 g",d:"bis 3–5 Tage nach klinischer Besserung",e:"Ib, B",q:"PEG 2018"},
+   {t:"Komplizierte Pyelonephritis: Ceftazidim 3 × 2 g",d:"bis 3–5 Tage nach klinischer Besserung",e:"Ib, A",q:"PEG 2018"}],
+  hinweise:["Urinkultur vor Therapiebeginn, Urin sofort ins Labor oder gekühlt.","Unkomplizierte schwere Pyelonephritis: Ceftriaxon, primär kein Aminoglykosid als Kombination.","Gesamttherapiedauer 1 bis 2 Wochen, Umstellung auf orale Therapie nach Antibiogramm."]},
+ pyelonephritis_obstruktiv:{kapitel:"Harnwegsinfektionen",stand:"11.04.2022",titel:"Pyelonephritis, kompliziert",
+  regime:[{t:"Unkompliziert, schwere Verlaufsform: Ceftriaxon 2 × 2 g am ersten Tag, dann 1 × 2 g",d:"bis 3–5 Tage nach Besserung, gesamt 1–2 Wochen",e:"Ib, A",q:"DGU 2017, PEG 2018"},
+   {t:"Kompliziert, nosokomial: Piperacillin/Tazobactam 3 × 4/0,5 g",d:"bis 3–5 Tage nach Besserung",e:"II, B",q:"modifiziert"},
+   {t:"Kompliziert, nosokomial: Meropenem 3 × 1–2 g oder Ceftazidim 3 × 2 g",d:"bis 3–5 Tage nach Besserung",e:"Ib",q:"PEG 2018"}],
+  hinweise:["Primär kein Aminoglykosid als Kombinationspartner."]},
+ katheter_hwi:{kapitel:"Harnwegsinfektionen",stand:"11.04.2022",titel:"Bakteriurie und katheterassoziierte Infektion",
+  regime:[{t:"Asymptomatische Bakteriurie: keine Therapie",d:"—",e:"Ia, A",q:"DGU 2017, EAU 2021"},
+   {t:"Vor blasenschleimhautverletzenden Eingriffen, ggf. bei Immunsuppression: gezielte Therapie gemäß Antibiogramm",d:"5–7 Tage",e:"V, B",q:"modifiziert"}],
+  hinweise:["Katheterentfernung oder -wechsel vor Gewinnung von Dauerkatheterurin dringlich empfohlen.","Eine Bakteriurie ist in bis zu 90 % Kolonisation und keine Infektion.","Bei stabilen Patienten mit Katheter: Mikrobiologie abwarten, dann gezielt behandeln.","Bei instabilen Patienten, Urinaufstau, Flankenklopfschmerz, Sepsis, Neutropenie oder neuer Bewusstseinsstörung kalkuliert behandeln."]},
+ peritonitis_ambulant:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Sekundäre ambulant erworbene Peritonitis",
+  regime:[{t:"Lokalisiert, frische Perforation, kein MRE-Risiko: Cefuroxim 3 × 1,5 g + Metronidazol 3 × 400–500 mg",d:"3 Tage",e:"A",q:"PEG 2018"},
+   {t:"Lokalisiert, bei Betalaktamallergie: Ciprofloxacin + Metronidazol",d:"3 Tage",e:"A",q:"PEG 2018"},
+   {t:"Diffus, ältere Perforation, ggf. MRE-Risiko: Piperacillin/Tazobactam 3–4 × 4/0,5 g",d:"5 Tage",e:"A",q:"PEG 2018"},
+   {t:"Diffus: Meropenem 3 × 2 g",d:"5 Tage",e:"A",q:"PEG 2018, Substanz modifiziert (Meropenem statt Ertapenem)"}],
+  hinweise:["Therapiedauer nach dem PEG-Stufenmodell — siehe Stewardship-Seite."]},
+ peritonitis_post:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Sekundäre nosokomiale und tertiäre Peritonitis, MRE-Risiko",
+  regime:[{t:"Meropenem 3 × 2 g ± Linezolid 2 × 600 mg ± Fosfomycin 3 × 5 g ± Caspofungin (Tag 1: 70 mg, ab Tag 2: 50 mg; über 80 kg dauerhaft 70 mg)",d:"7–10 Tage",e:"A, Fosfomycin B",q:"PEG 2018, modifiziert"}],
+  hinweise:["Mikrobiologische Vorbefunde beachten.","Bei MRSA: Vancomycin oder Linezolid, jeweils kombiniert mit einer gramnegativ und anaerob wirksamen Substanz.","Bei 3MRGN und ESBL: Meropenem ± Fosfomycin.","Bei VRE: Linezolid oder Tigecyclin, jeweils in Kombination."]},
+ peritonitis_tertiaer:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Tertiäre Peritonitis",
+  regime:[{t:"Meropenem 3 × 2 g ± Linezolid ± Fosfomycin ± Caspofungin",d:"7–10 Tage",e:"A",q:"PEG 2018, modifiziert"}],
+  hinweise:["Stellt sich nach 7 bis 10 Tagen kein Behandlungserfolg ein, ist Absetzen und erneute Probengewinnung angeraten."]},
+ sbp:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Primäre Peritonitis bei Leberzirrhose",
+  regime:[{t:"Ceftriaxon 1 × 2 g i.v.",d:"7 Tage",e:"B",q:"PEG 2018"},
+   {t:"Piperacillin/Tazobactam 3 × 4/0,5 g i.v.",d:"7 Tage",e:"B",q:"PEG 2018"}],
+  hinweise:["An Albumingabe denken (ausdrücklicher Hinweis der Hausleitlinie)."]},
+ cholangitis:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Cholezystitis und Cholangitis",
+  regime:[{t:"Ambulant, mild bis moderat: Ceftriaxon 1–2 × 2 g + Metronidazol 3 × 400–500 mg",d:"3–5 Tage",e:"A",q:"DGVS 2018, PEG 2018"},
+   {t:"Ambulant, schwer, hohes Alter, Immundefizienz: Ceftriaxon + Metronidazol",d:"5–7 Tage",e:"A",q:"Brodt, PEG 2018, DGVS 2018"},
+   {t:"Bei Betalaktamallergie: Levofloxacin 1–2 × 500 mg + Metronidazol",d:"3–7 Tage",e:"A",q:"DGVS 2018, PEG 2018"},
+   {t:"Sepsis mit Fokus Gallenwege: Ceftriaxon 1–2 × 2 g + Metronidazol 3 × 400–500 mg",d:"7–10 Tage",e:"—",q:"PEG 2018, modifiziert"}],
+  hinweise:["Die Notwendigkeit einer Antibiotikatherapie bei unkomplizierter Cholezystitis ist umstritten.","Eine akute obstruktive Cholangitis soll unverzüglich antibiotisch therapiert werden.","Bei nosokomialem Gallenfokus wie Sepsis Fokus Darm vorgehen."]},
+ pankreasnekrose:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Akute Pankreatitis",
+  regime:[{t:"Ohne infizierte Nekrosen, Pseudozysten oder Abszess: keine antibiotische Therapie",d:"—",e:"k. A.",q:"PEG 2018"},
+   {t:"Mit infizierten Nekrosen, Pseudozysten, Abszess: Meropenem 3 × 2 g i.v.",d:"7–10 Tage",e:"A",q:"PEG 2018"},
+   {t:"Bei Betalaktamallergie: Ciprofloxacin 2 × 400 mg + Metronidazol 3 × 500 mg",d:"7–10 Tage",e:"B",q:"PEG 2010, modifiziert"}],
+  hinweise:[]},
+ divertikulitis:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Divertikulitis",
+  regime:[{t:"Komplizierte Divertikulitis (CDD Typ 2): Cefuroxim 3 × 1,5 g + Metronidazol 3 × 400–500 mg",d:"4–7 Tage",e:"A",q:"Germer 2007, PEG 2018, DGVS 2021"},
+   {t:"Komplizierte Divertikulitis: Ciprofloxacin + Metronidazol",d:"4–7 Tage",e:"A",q:"PEG 2018, DGVS 2021"},
+   {t:"Unkompliziert mit phlegmonöser Umgebungsreaktion (CDD 1b): Amoxicillin/Clavulansäure 3 × 875/125 mg p.o.",d:"4–7 Tage",e:"k. A.",q:"DGVS 2021"}],
+  hinweise:["Bei akuter linksseitiger Divertikulitis CDD 1b ohne Risikofaktoren kann unter engmaschiger Kontrolle auf Antibiotika verzichtet werden.","Operationsindikation bei Typ 2 bis 4 unabhängig von der Antibiotikatherapie prüfen."]},
+ leberabszess:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Leberabszess, bakteriell",
+  regime:[{t:"Initial: Ceftriaxon 1 × 2 g + Metronidazol 3 × 500 mg i.v.",d:"10–14 Tage",e:"k. A.",q:"Brodt, Gilbert"},
+   {t:"Sequenztherapie: Cefpodoxim 2 × 200 mg + Metronidazol 3 × 500 mg p.o.",d:"≥ 14 Tage",e:"k. A.",q:"Brodt, Gilbert"}],
+  hinweise:["Wenn klinisch möglich, zuerst Abszesspunktion versuchen — nach Ausschluss einer Echinokokkose.","Je nach Herkunftsland an Amöbenabszess und Tuberkulose denken."]},
+ cdi:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Clostridioides-difficile-Infektion",
+  regime:[{t:"Initiale Infektion ohne Kolitiszeichen: auslösende Antibiotikatherapie absetzen, supportive Therapie, klinische Beobachtung",d:"2 Tage",e:"—",q:"ESCMID 2021, DGVS 2023"},
+   {t:"Initiale Infektion: Vancomycin 4 × 125 mg p.o.",d:"10–14 Tage",e:"I, B",q:"IDSA 2021, ESCMID 2021, DGVS 2023"},
+   {t:"Initiale Infektion, nicht schwer, keine Risikofaktoren: Metronidazol 3 × 400 mg p.o.",d:"10 Tage",e:"—",q:"DGVS 2023"},
+   {t:"Schwerer Verlauf: Vancomycin 4 × 125–500 mg p.o.",d:"10–14 Tage",e:"I, A",q:"ESCMID 2021, DGVS 2023"},
+   {t:"Schwerer Verlauf bei Nichtansprechen: Fidaxomicin 2 × 200 mg p.o.",d:"10 Tage",e:"I, B",q:"ESCMID 2021, DGVS 2023"},
+   {t:"Erstes Rezidiv nach initialer Vancomycintherapie: Fidaxomicin 2 × 200 mg p.o.",d:"10 Tage",e:"I, B",q:"ACG 2021, IDSA 2021, ESCMID 2021, DGVS 2023"},
+   {t:"Ab zweitem Rezidiv: Vancomycin im Ausschleichschema oder fäkaler Mikrobiotatransfer",d:"Wochen",e:"—",q:"IDSA 2021, ACG 2021, ESCMID 2021"}],
+  hinweise:["Bei nicht möglicher oraler Therapie: Metronidazol 3 × 500 mg i.v. oder Tigecyclin.","Bei fulminantem Verlauf chirurgisches Konsil, Operationsindikation innerhalb 24 bis 48 Stunden.","Kriterien schwerer Verlauf: Fieber > 38,5 °C, Leukozytose > 15.000/µl, Kreatininanstieg > 50 % des Ausgangswerts.","Motilitätshemmer vermeiden, PPI-Indikation prüfen.","Händewaschen mit Wasser und Seife zusätzlich zur Desinfektion — Sporen sind alkoholresistent."]},
+ intraabdominelle_candidose:{kapitel:"Abdominelle Infektionen",stand:"10.09.2024",titel:"Antimykotische Komponente bei nosokomialer und tertiärer Peritonitis",
+  regime:[{t:"Caspofungin Tag 1: 1 × 70 mg, ab Tag 2: 1 × 50 mg; über 80 kg dauerhaft 70 mg — als Teil der Kombination mit Meropenem",d:"7–10 Tage",e:"A",q:"PEG 2018, modifiziert"}],
+  hinweise:["Verdacht auf Pilzsepsis laut Sepsiskapitel: schwere Immunsuppression, hämatoonkologische Grunderkrankung, nach darmchirurgischer Operation, Anastomoseninsuffizienz."]},
+ sab:{kapitel:"Blutstrominfektionen",stand:"14.07.2026",titel:"Staphylococcus-aureus-Sepsis",
+  regime:[{t:"MSSA: Cefazolin 3 × 2 g ± Rifampicin 2 × 600 mg",d:"≥ 14 Tage",e:"k. A.",q:"PEG 2018, modifiziert"},
+   {t:"MSSA: Flucloxacillin 6 × 2 g oder 3 × 4 g ± Rifampicin 2 × 600 mg",d:"≥ 14 Tage",e:"k. A.",q:"PEG 2018, modifiziert"},
+   {t:"MRSA: Vancomycin nach Dosierungsschema + Rifampicin 2 × 600 mg",d:"≥ 14 Tage",e:"k. A.",q:"PEG 2018, modifiziert"},
+   {t:"MRSA, nicht-pneumogene Sepsis: Daptomycin 1 × 9 mg/kg",d:"≥ 14 Tage",e:"k. A.",q:"PEG 2018, modifiziert"}],
+  hinweise:["Rifampicin-Zusatz bei liegendem Device oder Implantaten.","Kontrollblutkultur-Set 48 bis 72 Stunden nach Therapiebeginn.","Es gilt zusätzlich der hauseigene Standard „Blutstrominfektion / Bakteriämie mit Staphylococcus aureus“.","MSSA-Pneumonie laut Atemwegskapitel: Flucloxacillin 4–6 × 2 g oder 4 × 3 g; MRSA-Pneumonie: Linezolid 2 × 600 mg oder Vancomycin + Rifampicin 2 × 450 mg."]},
+ enterokokken_bakteriaemie:{kapitel:"Blutstrominfektionen",stand:"14.07.2026",titel:"Enterococcus-spp.-Sepsis",
+  regime:[{t:"VRE: Linezolid 2 × 600 mg i.v.",d:"7–10 Tage",e:"k. A.",q:"PEG 2018"},
+   {t:"VRE, nur bei intraabdominellem Fokus: Tigecyclin, Loading 100–200 mg, dann 2 × 50–100 mg",d:"7–10 Tage",e:"k. A.",q:"PEG 2018"},
+   {t:"VRE: Daptomycin 1 × 6–9 mg/kg",d:"7–10 Tage",e:"k. A.",q:"PEG 2018"}],
+  hinweise:[]},
+ crbsi:{kapitel:"Blutstrominfektionen",stand:"14.07.2026",titel:"Verdacht auf katheterassoziierte Infektion",
+  regime:[{t:"Zusatzrisiko C: zusätzlich zur fokusbezogenen Therapie Vancomycin 2 × 1 g i.v.",d:"nach Verlauf",e:"—",q:"DSG 2025"}],
+  hinweise:["Kein eigenes Kapitel — die Hausleitlinie behandelt die katheterassoziierte Infektion als Zusatzrisiko im Sepsiskapitel."]},
+ candidaemie:{kapitel:"Blutstrominfektionen",stand:"14.07.2026",titel:"Verdacht auf Pilzsepsis (Zusatzrisiko B)",
+  regime:[{t:"Caspofungin 1 × 50 mg (unter 80 kg) beziehungsweise 1 × 70 mg (über 80 kg), zusätzlich zur antibakteriellen Therapie",d:"nach Verlauf",e:"—",q:"DSG 2025"}],
+  hinweise:["Auslöser laut Hausleitlinie: schwere Immunsuppression, hämatoonkologische Grunderkrankung, Zustand nach darmchirurgischer Operation, Anastomoseninsuffizienz."]},
+ nekrot_fasziitis:{kapitel:"Haut- und Weichgewebeinfektionen",stand:"11.06.2019",titel:"Lebensbedrohliche nekrotisierende Weichgewebeinfektion, sofortige OP-Indikation",
+  regime:[{t:"Meropenem 3 × 2 g + Clindamycin 3 × 900 mg i.v.",d:"7–10 Tage",e:"III, B",q:"PEG 2018, Dosis modifiziert"}],
+  hinweise:["Sofortige Operationsindikation.","Mikrobiologie: Gewebe, Aspirat, Punktat, Abstrich sowie 2 bis 3 Blutkultursets.","Bei S.-pyogenes-Sepsis laut Sepsiskapitel: Penicillin G 4–6 × 5 Mio. I.E. ± Clindamycin 3–4 × 600 mg–1,2 g.","Sepsis mit Fokus Haut/Weichgewebe, nosokomial: Piperacillin/Tazobactam ± Clindamycin 3 × 900 mg; bei 3MRGN Meropenem 3 × 2 g + Clindamycin."]},
+ gas_peripartal:{kapitel:"Blutstrominfektionen",stand:"14.07.2026",titel:"Streptococcus-pyogenes-Sepsis",
+  regime:[{t:"Penicillin G 4–6 × 5 Mio. I.E. ± Clindamycin 3–4 × 600 mg–1,2 g i.v.",d:"7–10 Tage",e:"k. A.",q:"PEG 2018"}],
+  hinweise:["Kein eigenes peripartales Kapitel in den vorliegenden Unterlagen."]},
+ phlegmone:{kapitel:"Haut- und Weichgewebeinfektionen",stand:"11.06.2019",titel:"Phlegmone",
+  regime:[{t:"Begrenzt, jeglicher Schweregrad: Cefazolin 3–4 × 2 g i.v.",d:"(5–)7 Tage",e:"Ib, A",q:"PEG 2018, Dosis modifiziert"},
+   {t:"Begrenzt, bei gramnegativer Besiedlung der Eintrittspforte: Cefuroxim 3 × 1,5–3 g",d:"(5–)7 Tage",e:"C",q:"PEG 2018"},
+   {t:"Begrenzt, bei wahrscheinlichen Anaerobiern: Clindamycin 3–4 × 600 mg–1,2 g",d:"(5–)7 Tage",e:"B",q:"PEG 2018"},
+   {t:"Schwer, dringende OP-Indikation: Cefazolin 3–4 × 2 g, bis 12 g/d bei lebensbedrohlicher Infektion, plus Débridement",d:"5–10 Tage",e:"III, C",q:"PEG 2018"},
+   {t:"Tiefe Infektion, fehlendes Ansprechen: Flucloxacillin 4–6 × 2 g + Fosfomycin 3 × 5–8 g plus Débridement",d:"5–10 Tage",e:"IIa, C",q:"PEG 2018, Dosis modifiziert"}],
+  hinweise:["Sepsis mit Fokus Haut/Weichgewebe, ambulant erworben: Cefuroxim 3 × 1,5 g + Clindamycin 3 × 900 mg.","Erysipel unkompliziert: Penicillin V p.o.; kompliziert oder Kopfbereich: Penicillin G 4–6 × 5 Mio. I.E."]},
+ ssi:{kapitel:"Haut- und Weichgewebeinfektionen",stand:"11.06.2019",titel:"Postoperative Wundinfektion, Abszess, Phlegmone",
+  regime:[{t:"Staphylogener Abszess, kritische Lokalisation oder Komorbiditäten: Cefazolin 3–4 × 2 g i.v.",d:"(5–)7 Tage",e:"Ib, A",q:"PEG 2018, Dosis modifiziert"},
+   {t:"Kompliziert, nicht allein staphylogen (Darm, Perinealgegend): Ampicillin/Sulbactam 3 × 1/0,5 g bis 2/1 g i.v.",d:"7 Tage",e:"Ib, A",q:"PEG 2018"},
+   {t:"Komplizierte schwere Weichgewebeinfektion bei mehreren Komorbiditäten: Piperacillin/Tazobactam 3–4 × 4/0,5 g, bis 3 × 8/1 g in schweren Fällen",d:"10 (7–14) Tage",e:"Ib, A",q:"PEG 2018"},
+   {t:"Alternativ: Meropenem 3 × 1 g",d:"7–14 Tage",e:"IIa, B",q:"PEG 2018"}],
+  hinweise:["Chirurgische Intervention erforderlich bei eitriger, anaerober Wundinfektion oder ausgedehnter Phlegmone mit Kreislaufinstabilität.","Bei verunreinigter Wunde Tetanusimpfstatus prüfen, bei Tierbiss Tollwutrisiko."]},
+ dfs:{kapitel:"Haut- und Weichgewebeinfektionen",stand:"11.06.2019",titel:"Fußinfektionen bei schwerem Diabetes mellitus (PEDIS)",
+  regime:[{t:"PEDIS 2, oberflächlich < 2 cm: Cefuroxim 3 × 1,5–3 g i.v.",d:"5–14 Tage",e:"III, B",q:"PEG 2018"},
+   {t:"PEDIS 3, tiefe Infektion: Piperacillin/Tazobactam 3 × 4/0,5 g bis 8/1 g i.v.",d:"7–14 Tage",e:"Ib, B",q:"PEG 2018, modifiziert"},
+   {t:"Bei Betalaktamallergie: Ciprofloxacin + Metronidazol",d:"7–14 Tage",e:"IV, C",q:"modifiziert"}],
+  hinweise:["PEDIS-Klassifikation Grad 1 bis 4 im Hausdokument hinterlegt.","Kritische Ischämie verschiebt den Schweregrad in Richtung schwer und kann die klinischen Zeichen abmildern."]},
+ febrile_neutropenie:{kapitel:"Fieber unbekannter Ursache bei Neutropenie",stand:"11.06.2019",titel:"Febrile Neutropenie",
+  regime:[{t:"Standardrisiko, stationär: Piperacillin/Tazobactam 3–4 × 4/0,5 g i.v.",d:"≥ 7 Tage",e:"I, A",q:"DGHO 2017, modifiziert"},
+   {t:"Standardrisiko ohne Ansprechen nach 96 h: Meropenem 3 × 2 g i.v.",d:"≥ 7 Tage",e:"A",q:"DGHO 2017, modifiziert"},
+   {t:"Hochrisiko: Piperacillin/Tazobactam 3–4 × 4/0,5 g oder Meropenem 3 × 2 g",d:"≥ 7 Tage",e:"I, A",q:"DGHO 2017, modifiziert"},
+   {t:"Hochrisiko ohne Ansprechen nach 96 h, bei Mukositis, Katheterverdacht oder MRSA-Kolonisation: zusätzlich Vancomycin 2 × 1 g",d:"≥ 7 Tage",e:"III, C",q:"DGHO 2017"},
+   {t:"Hochrisiko ohne Ansprechen nach 96 h, Verdacht auf Pilzinfektion: Caspofungin Tag 1: 70 mg, ab Tag 2: 50 mg",d:"≥ 7 Tage",e:"I, A",q:"DGHO 2017"}],
+  hinweise:["Definitionen: Fieber einmalig ≥ 38,3 °C oder zweimalig ≥ 38,0 °C; Neutropenie < 500/µl oder < 1000/µl mit erwartetem Abfall.","Hochrisiko ab einer Neutropeniedauer von ≥ 8 Tagen; MASCC-Score ≥ 21 definiert Standardrisiko.","Therapiedauer: bei Granulozyten > 1000/µl bis 2 Tage nach Entfieberung, bei < 1000/µl bis 7 Tage nach Entfieberung.","Bestehende Pilzprophylaxe mit Posaconazol oder Itraconazol weitergeben."]},
+ vat:{kapitel:"Atemwegsinfektionen",stand:"04.02.2022",titel:"Akute Bronchitis und AECOPD",
+  regime:[{t:"Akute Bronchitis: in der Regel keine Antibiotika",d:"—",e:"k. A.",q:"Gilbert 2020"},
+   {t:"AECOPD leicht bis mittelschwer ohne purulentes Sputum: in der Regel keine Antibiotika",d:"—",e:"B",q:"DGP 2018"},
+   {t:"AECOPD sehr schwer bzw. beatmet oder mit Pseudomonas-Risiko: Piperacillin/Tazobactam 3–4 × 4/0,5 g oder Meropenem 3 × 1–2 g",d:"8 Tage",e:"B",q:"PEG 2018"}],
+  hinweise:["Purulentes Sputum ist der beste klinische Hinweis auf eine bakterielle Infektion; alternativ PCT (bei ≤ 0,1 ng/ml keine Antibiose)."]},
+ virale_superinfektion:{kapitel:"Atemwegsinfektionen",stand:"04.02.2022",titel:"Influenza und gezielte Erregertherapie",
+  regime:[{t:"Bei hoher Influenza-Aktivität: frühzeitige kalkulierte Gabe von Oseltamivir bei mittelschwerer und schwerer Pneumonie, nach Ausschluss beenden",d:"nach Verlauf",e:"—",q:"DGP 2021"},
+   {t:"MSSA-Pneumonie: Flucloxacillin 4–6 × 2 g oder 4 × 3 g",d:"7–28 Tage (bei Bakteriämie)",e:"k. A.",q:"PEG 2018, DGP 2021"},
+   {t:"MRSA-Pneumonie: Linezolid 2 × 600 mg",d:"7–28 Tage",e:"A-II",q:"IDSA 2011, PEG 2018, DGP 2017"}],
+  hinweise:["Legionellen gezielt: Clarithromycin 2 × 500 mg oder Levofloxacin 2 × 500 mg über 7 bis 10 Tage."]}
+};
+
+/* Stellen, an denen App-Empfehlung und Hausleitlinie auseinandergehen */
+const LL_KONFLIKTE = [
+ {fokus:"cdi",titel:"CDI: Erstlinie",
+  haus:"Vancomycin 4 × 125 mg p.o. über 10 bis 14 Tage; Fidaxomicin erst bei Nichtansprechen im schweren Verlauf und beim ersten Rezidiv.",
+  app:"Fidaxomicin als präferierte Erstlinie bei initialer Infektion und erstem Rezidiv.",
+  einordnung:"Die aktualisierte DGVS-Leitlinie stellt Fidaxomicin nach vorn, weil es die Mikrobiotadiversität schont und die Rezidivrate senkt. Das Hauskapitel ist vom 10.09.2024 und führt Vancomycin zuerst — es zitiert die DGVS 2023 an gleicher Stelle. Im Zweifel Hausvorgabe folgen und die Abweichung im ABS-Team ansprechen."},
+ {fokus:"peritonitis_ambulant",titel:"Cefuroxim bei lokalisierter Peritonitis",
+  haus:"Cefuroxim 3 × 1,5 g + Metronidazol über 3 Tage bei frischer Perforation ohne MRE-Risiko.",
+  app:"Piperacillin/Tazobactam als Erstlinie.",
+  einordnung:"Das Hausresistogramm vom 19.02.2025 weist Cefuroxim gegen E. coli und Klebsiella nur mit 80 bis 89 % aus. Bei lokalisierter Peritonitis mit kurzer Therapiedauer und guter Fokussanierung ist das vertretbar; bei Sepsiszeichen sollte das breitere Regime gewählt werden."},
+ {fokus:"divertikulitis",titel:"Cefuroxim bei komplizierter Divertikulitis",
+  haus:"Cefuroxim 3 × 1,5 g + Metronidazol über 4 bis 7 Tage.",
+  app:"Piperacillin/Tazobactam.",
+  einordnung:"Gleiche Einordnung wie bei der Peritonitis: die lokale Cefuroxim-Wirksamkeit gegen Enterobacterales liegt im gelben Bereich."},
+ {fokus:"scap",titel:"Makrolidwahl bei schwerer CAP",
+  haus:"Clarithromycin 2 × 500 mg, Tag 1 bis 3.",
+  app:"Azithromycin wegen des geringeren Interaktionspotenzials.",
+  einordnung:"Die Hausleitlinie nennt Azithromycin selbst als Makrolid der Wahl bei älteren Patienten und bei interaktionsrelevanter Komedikation — im sCAP-Regime steht jedoch Clarithromycin. Auf der Intensivstation mit Midazolam, Statinen und Calcineurininhibitoren ist die Interaktionslage regelhaft relevant."},
+ {fokus:"aspiration",titel:"Anaerobierabdeckung bei Aspiration",
+  haus:"Ampicillin/Sulbactam oder Ceftriaxon plus Clindamycin 3 × 600 mg.",
+  app:"Keine routinemäßige Anaerobiererweiterung; Clindamycin bleibt für Lungenabszess, nekrotisierende Pneumonie und Empyem.",
+  einordnung:"Das Hauskapitel ist von 2022 und kombiniert Ceftriaxon mit Clindamycin. Ampicillin/Sulbactam als Alternative deckt Anaerobier bereits ab — dort ist kein Clindamycin nötig. Zusätzlich: Clindamycin wirkt im Haus bei S. aureus nur unter 80 %."},
+ {fokus:"urosepsis",titel:"Cefepim bei nosokomialer Urosepsis",
+  haus:"Cefepim 3 × 1–2 g i.v.",
+  app:"Piperacillin/Tazobactam, bei ESBL oder Schock Meropenem.",
+  einordnung:"Cefepim ist im Hausresistogramm nicht aufgeführt, eine lokale Wirksamkeitsaussage fehlt also. Cefepim deckt zudem keine Enterokokken ab, die im Erregerspektrum der komplizierten Harnwegsinfektion ausdrücklich genannt sind."},
+ {fokus:"nekrot_fasziitis",titel:"Regime bei nekrotisierender Fasciitis",
+  haus:"Meropenem 3 × 2 g + Clindamycin 3 × 900 mg über 7 bis 10 Tage.",
+  app:"Piperacillin/Tazobactam + Clindamycin + Vancomycin.",
+  einordnung:"Die Hausvorgabe ist enger und verzichtet auf die kalkulierte MRSA-Abdeckung. Das passt zum Resistogramm, das für S. aureus einen niedrigen MRSA-Anteil nahelegt. Bei bekannter MRSA-Kolonisation ist die Ergänzung nach Zusatzrisiko A vorgesehen."},
+ {fokus:"sab",titel:"MSSA-Bakteriämie",
+  haus:"Cefazolin 3 × 2 g oder Flucloxacillin 6 × 2 g beziehungsweise 3 × 4 g, jeweils ± Rifampicin bei Device.",
+  app:"Flucloxacillin als Erstlinie, Cefazolin als Alternative.",
+  einordnung:"Kein Widerspruch — Hausleitlinie und App decken sich. Zusätzlich verbindlich: hauseigener Standard „Blutstrominfektion / Bakteriämie mit Staphylococcus aureus“ und Kontrollblutkultur nach 48 bis 72 Stunden."}
+];
+
 
 /* ---------- Daten zusammenführen ---------- */
 const ALLE_SUBS = SUBSTANZEN.concat(SUBSTANZEN2).concat(typeof SUBSTANZEN3!=='undefined'?SUBSTANZEN3:[]);
@@ -1903,6 +2140,7 @@ function viewHome(){
     <div class="minor">
       <button onclick="go('#/komp')">Kompartimente</button>
       <button onclick="go('#/kombi')">Kombinationen</button>
+      <button onclick="go('#/hausll')">Hausleitlinie</button>
       <button onclick="go('#/abs')">Stewardship</button>
       <button onclick="go('#/resistogramm')">Hausresistogramm</button>
       <button onclick="go('#/resistenz')">Eigene Werte</button>
@@ -1930,6 +2168,9 @@ function searchIndex(){
   ERREGER.forEach(e=>i.push({t:e.name,s:e.gruppe,h:'#/err/'+e.id,k:(e.name+' '+e.kurz+' '+e.gruppe+' '+e.res.join(' ')).toLowerCase()}));
   KOMPARTIMENTE.forEach(k=>i.push({t:k.name,s:'Kompartiment',h:'#/komp/'+k.id,k:(k.name+' '+k.barriere).toLowerCase()}));
   ABK.forEach(a=>i.push({t:a[0],s:'Abkürzung: '+a[1],h:'#/abk',k:(a[0]+' '+a[1]).toLowerCase()}));
+  if(typeof LL_FOKUS!=='undefined') Object.keys(LL_FOKUS).forEach(fid=>{const l=LL_FOKUS[fid];
+    i.push({t:l.titel,s:'Hausleitlinie · '+l.kapitel,h:'#/fokus/'+fid,k:(l.titel+' '+l.kapitel+' hausleitlinie '+l.regime.map(r=>r.t).join(' ')).toLowerCase()})});
+  if(typeof LL_KONFLIKTE!=='undefined') LL_KONFLIKTE.forEach(x=>i.push({t:x.titel,s:'Haus und App im Vergleich',h:'#/hausll',k:(x.titel+' '+x.haus+' '+x.app).toLowerCase()}));
   RG_ZEILEN.forEach(z=>i.push({t:z.name,s:'Hausresistogramm',h:'#/resistogramm',k:(z.name+' resistogramm resistenz').toLowerCase()}));
   RG_BEFUNDE.forEach(b=>i.push({t:b.titel,s:'Hausresistogramm',h:'#/resistogramm',k:(b.titel+' '+b.text).toLowerCase()}));
   return i;
@@ -2166,12 +2407,14 @@ function viewFokus(id){
       ${['haeufig','moeglich','selten'].map(h=>{const g=grp(h);if(!g.length)return'';
         return `<p class="note" style="margin:${h==='haeufig'?'0':'12px'} 0 6px"><span class="dot ${h}" style="display:inline-block;margin-right:6px"></span>${HAEUF[h]}</p>
         <div class="chips">${g.map(errChip).join('')}</div>`}).join('')}</div>
-    <div class="card"><h3>Kalkulierte Therapie</h3>
+    ${llKarte(f)}
+    <div class="card"><h3>Kalkulierte Therapie nach Leitlinienlage</h3>
       ${f.therapie.map(t=>`<div class="ther"><b>${esc(t.label)}</b>
         ${t.subs&&t.subs.length?`<div class="chips">${t.subs.map(sid=>{const s=byId(ALLE_SUBS,sid);
           return s?`<button class="chip ${s.haus==='erweitert'?'ext':''}" onclick="go('#/sub/${s.id}')">${esc(s.name)}</button>`:''}).join('')}</div>`:''}
         <p>${ungepr(esc(t.text))}</p></div>`).join('')}
       <p class="note">Gestrichelt umrandete Substanzen sind leitliniengerecht, gehören aber nicht zu den zwölf im Haus üblichen.</p></div>
+    ${konfliktKarte(f)}
     ${rgBanner(f)}
     ${resBanner(f.id)}
     <div class="card"><h3>Kombination</h3><p>${ungepr(esc(f.kombi))}</p></div>
@@ -2307,6 +2550,54 @@ function viewUeber(){
       <dt>Offline</dt><dd id="offl">wird geprüft …</dd></dl>
       <p class="note">Favoriten, eingetragene Werte und Einstellungen bleiben auf diesem Gerät und werden nirgends übertragen.</p></div>
     <p class="foot">Stand: September 2026. Grundlagen unter anderem S3 020-013 (2024), S3 067/011 (02/2026), S2k 030-089, ESC 2023, DGVS S2k, BALANCE, STOP-IT, MERINO, Cochrane CD001067.</p>`;
+  window.scrollTo(0,0);
+}
+
+/* ---------- Hausleitlinie ---------- */
+function llFuerFokus(fid){return (typeof LL_FOKUS!=='undefined')?LL_FOKUS[fid]:null;}
+function konflikteFuerFokus(fid){return (typeof LL_KONFLIKTE!=='undefined')?LL_KONFLIKTE.filter(k=>k.fokus===fid):[];}
+function llKarte(f){
+  const ll=llFuerFokus(f.id);
+  if(!ll) return `<div class="card"><h3>Hausleitlinie</h3>
+    <p class="note" style="margin:0">Für diesen Fokus liegt kein Kapitel der Antibiotika-Leitlinie des Hauses vor. Es gelten die allgemeinen Vorgaben —
+    <button class="chip" onclick="go('#/hausll')">Übersicht</button></p></div>`;
+  return `<div class="card haus"><h3>HAUSLEITLINIE — VERBINDLICH</h3>
+    <p style="margin:0 0 4px;font-weight:600;font-size:15px">${esc(ll.titel)}</p>
+    <div class="llmeta"><span>${esc(ll.kapitel)}</span><span class="stand">Stand ${esc(ll.stand)}</span></div>
+    <div style="margin-top:14px">${ll.regime.map(r=>`<div class="llreg"><b>${esc(r.t)}</b>
+      <div class="llmeta"><span>Dauer: ${esc(r.d)}</span>${r.e&&r.e!=='—'?`<span>Evidenz ${esc(r.e)}</span>`:''}<span>${esc(r.q)}</span></div></div>`).join('')}</div>
+    ${ll.hinweise&&ll.hinweise.length?`<ul style="margin-top:14px">${ll.hinweise.map(h=>`<li>${esc(h)}</li>`).join('')}</ul>`:''}
+    <p class="note"><button class="chip" onclick="go('#/hausll')">Alle Hauskapitel</button>
+      <button class="chip" onclick="go('#/abs')">Stewardship</button></p></div>`;
+}
+function konfliktKarte(f){
+  const k=konflikteFuerFokus(f.id); if(!k.length) return '';
+  return `<div class="card"><h3>Hausleitlinie und App im Vergleich</h3>
+    ${k.map(x=>`<div class="konflikt"><b>${esc(x.titel)}</b>
+      <dl class="dl"><dt>Haus</dt><dd>${esc(x.haus)}</dd><dt>Diese App</dt><dd>${esc(x.app)}</dd></dl>
+      <p style="margin:8px 0 0;font-size:14.5px">${esc(x.einordnung)}</p></div>`).join('')}</div>`;
+}
+function viewHausLL(){
+  renderBar('Hausleitlinie',null);
+  const abgedeckt=Object.keys(LL_FOKUS);
+  const offen=ALLE_FOKI.filter(f=>!abgedeckt.includes(f.id));
+  app.innerHTML=`<h1>Antibiotika-Leitlinie des Hauses</h1>
+    <p class="lede">${esc(LL_META.hinweis)}</p>
+    <div class="card"><h3>Vorliegende Kapitel</h3>
+      ${LL_META.kapitel.map(k=>`<div class="penrow" style="cursor:default">
+        <span>${esc(k.name)}</span><span class="stand">${esc(k.stand)}</span></div>`).join('')}
+      <p class="note">${esc(LL_META.titel)} · ${esc(LL_META.herausgeber)}</p></div>
+    <div class="card"><h3>Foki mit Hausvorgabe (${abgedeckt.length})</h3>
+      <div class="chips">${abgedeckt.map(id=>{const f=byId(ALLE_FOKI,id);
+        return f?`<button class="chip" onclick="go('#/fokus/${f.id}')">${esc(f.name)}</button>`:''}).join('')}</div></div>
+    <div class="card"><h3>Ohne Hauskapitel (${offen.length})</h3>
+      <p class="note" style="margin:0 0 10px">Hier greifen die allgemeinen Vorgaben und die Leitlinienempfehlungen dieser App.</p>
+      <div class="chips">${offen.map(f=>`<button class="chip" onclick="go('#/fokus/${f.id}')">${esc(f.name)}</button>`).join('')}</div></div>
+    <div class="card"><h3>Abweichungen zwischen Haus und App</h3>
+      ${LL_KONFLIKTE.map(x=>`<div class="konflikt"><b>${esc(x.titel)}</b>
+        <dl class="dl"><dt>Haus</dt><dd>${esc(x.haus)}</dd><dt>Diese App</dt><dd>${esc(x.app)}</dd></dl>
+        <p style="margin:8px 0 0;font-size:14.5px">${esc(x.einordnung)}</p>
+        <p style="margin-top:8px"><button class="chip" onclick="go('#/fokus/${x.fokus}')">${esc((byId(ALLE_FOKI,x.fokus)||{}).name||'Fokus')}</button></p></div>`).join('')}</div>`;
   window.scrollTo(0,0);
 }
 
@@ -2480,8 +2771,13 @@ function viewAbs(){
       <p>${tr.length?`${tr.length} Schwelle${tr.length>1?'n':''} überschritten — die Hinweise erscheinen auf den betroffenen Fokusseiten.`:'Noch keine Werte eingetragen.'}</p>
       <p><button class="chip" onclick="go('#/resistogramm')">Hausresistogramm</button>
         <button class="chip" onclick="go('#/resistenz')">Eigene Werte eintragen</button></p></div>
-    <div class="card"><h3>Hausinterne Vorgaben</h3>
-      <p class="note">Hier fehlen noch: hauseigene Freigabepflichten für Reservesubstanzen, Meldewege, ABS-Visitenrhythmus und die verbindlichen Standardtherapiedauern des Hauses. Sobald das ABS-Dokument vorliegt, wird dieser Abschnitt damit gefüllt und die Fokusseiten werden gegen die Hausvorgaben gespiegelt.</p></div>`;
+    <div class="card haus"><h3>HAUSINTERNE VORGABEN</h3>
+      ${LL_ABS.map(a=>`<div class="llreg"><b>${esc(a.titel)}</b>
+        <p style="margin:0;font-size:14.5px">${esc(a.text)}</p></div>`).join('')}
+      <p class="note"><button class="chip" onclick="go('#/hausll')">Kapitel und Abweichungen</button></p></div>
+    <div class="card"><h3>Abweichungen zwischen Haus und App</h3>
+      <p>${LL_KONFLIKTE.length} Stellen, an denen die Hausleitlinie und die Leitlinienlage dieser App auseinandergehen — jeweils mit Einordnung.</p>
+      <p><button class="chip" onclick="go('#/hausll')">Ansehen</button></p></div>`;
   window.scrollTo(0,0);
 }
 
@@ -2498,6 +2794,7 @@ function route(){
     case 'schwanger':return viewSchwanger(); case 'abk':return viewAbk();
     case 'abs':return viewAbs(); case 'resistenz':return viewResistenz();
     case 'resistogramm':return viewResistogramm(); case 'referenzen':return viewReferenzen();
+    case 'hausll':return viewHausLL();
     case 'ueber':return viewUeber(); default:return viewHome();
   }
 }
@@ -2505,7 +2802,7 @@ window.addEventListener('hashchange',route);
 window.addEventListener('scroll',()=>{document.getElementById('hdr').classList.toggle('scrolled',window.scrollY>4)},{passive:true});
 route();
 
-const APP_VERSION = 'v2 — Hausresistogramm';
+const APP_VERSION = 'v3 — Hausleitlinie und Resistogramm';
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
   window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
 }
