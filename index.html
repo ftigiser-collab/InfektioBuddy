@@ -9,7 +9,7 @@
 <meta name="apple-mobile-web-app-title" content="Infektio">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-<link rel="icon" href="./icons/favicon-32.png">
+<link rel="icon" href="./icons/icon-192.png">
 <link rel="manifest" href="./manifest.webmanifest">
 <style>
 :root{
@@ -97,6 +97,25 @@ table.dur td{padding:9px 0;border-bottom:1px solid var(--line);vertical-align:to
 table.dur td:first-child{padding-right:12px}
 table.dur tr:last-child td{border-bottom:none}
 table.dur a{color:var(--teal-d);cursor:pointer;text-decoration:none}
+.rgwrap{overflow-x:auto;-webkit-overflow-scrolling:touch;margin:0 -16px;padding:0 16px}
+table.rg{border-collapse:separate;border-spacing:0;font-size:12px;min-width:640px}
+table.rg th{font-weight:700;color:var(--muted);font-size:11px;padding:6px 4px;text-align:center;white-space:nowrap}
+table.rg th.er{text-align:left;position:sticky;left:0;background:var(--card);z-index:2;min-width:170px;padding-left:0}
+table.rg td{padding:5px 4px;text-align:center;border-top:1px solid var(--line)}
+table.rg td.er{text-align:left;position:sticky;left:0;background:var(--card);z-index:2;
+  font-size:12.5px;padding-left:0;line-height:1.3}
+table.rg td.er a{color:var(--ink);cursor:pointer}
+.sq{display:inline-block;width:15px;height:15px;border-radius:3px}
+.sq.gruen{background:var(--gut)} .sq.gelb{background:var(--maessig)}
+.sq.rot{background:var(--schlecht)} .sq.leer{background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
+.rglegend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:var(--muted);margin-top:12px}
+.rglegend span{display:inline-flex;align-items:center;gap:6px}
+.lokal{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.rgcard{border-left:3px solid var(--maessig);padding:2px 0 2px 13px;margin-bottom:14px}
+.rgcard.rot{border-left-color:var(--schlecht)}
+.rgcard.gruen{border-left-color:var(--gut)}
+.rgcard b{display:block;font-size:13.5px;margin-bottom:5px}
+.rgcard.rot b{color:var(--schlecht)} .rgcard.gelb b{color:var(--maessig)} .rgcard.gruen b{color:var(--gut)}
 .gtools button{border:1px solid var(--line);background:var(--card);border-radius:999px;
   padding:6px 13px;font-size:13px;cursor:pointer;color:var(--muted)}
 .list{display:flex;flex-direction:column;gap:7px}
@@ -1601,14 +1620,151 @@ const RESISTENZ_FELDER = [
   foki:["sab","endokarditis_nativ"],subs:["flucloxacillin","cefazolin"]}
 ];
 
+/* ---------- Hausresistogramm ----------
+   Kurzübersicht Antibiotikawirksamkeit, MVZ Labor Dr. Limbach Heidelberg,
+   Diakonissen-Stiftungs-Krankenhaus Speyer (262). Auswertung ab 01.01.2024, Stand 19.02.2025.
+   Material: klinische Materialien. Erregergruppen mit n < 30 gehen nicht in die Auswertung ein.
+   Nur ein Erregernachweis pro Patient, maximal 92 Tage, Strategie zeitlicher Verlauf.
+   Werte: gruen = 90–100 % wirksam, gelb = 80–89 %, rot = 0–80 %, null = nicht ausgewertet. */
+
+const RG_META = {
+ quelle:"MVZ Labor Dr. Limbach, Heidelberg — Abteilung Mikrobiologie, HyBase-Statistik",
+ haus:"Diakonissen-Stiftungs-Krankenhaus Speyer (262)",
+ auswertung:"ab 01.01.2024",
+ stand:"19.02.2025",
+ material:"klinische Materialien",
+ hinweise:["Erreger bzw. Erregergruppen mit n < 30 gehen nicht in die Auswertung ein.",
+  "Nur ein Erregernachweis pro Patient, für maximal 92 Tage, Strategie: zeitlicher Verlauf.",
+  "Sensibel bei Standarddosierung oder hoher Dosierung.",
+  "Die Auswertung umfasst alle klinischen Materialien des Hauses, nicht nur die Intensivstation — auf der ITS ist mit ungünstigeren Werten zu rechnen."]
+};
+
+/* Spalten des Resistogramms; sub = zugehörige Substanz in dieser App (null = nicht als Karte hinterlegt) */
+const RG_SPALTEN = [
+ {kurz:"FLU",name:"Flucloxacillin/Oxacillin",sub:"flucloxacillin"},
+ {kurz:"AMX",name:"Ampicillin/Amoxicillin",sub:"ampicillin"},
+ {kurz:"ASU",name:"Ampicillin/Sulbactam",sub:"ampsulb"},
+ {kurz:"PTB",name:"Piperacillin/Tazobactam",sub:"piptazo"},
+ {kurz:"CXM",name:"Cefuroxim i.v.",sub:"cefuroxim"},
+ {kurz:"CRO",name:"Ceftriaxon",sub:"ceftriaxon"},
+ {kurz:"CAZ",name:"Ceftazidim",sub:"ceftazidim"},
+ {kurz:"IMP",name:"Imipenem",sub:null},
+ {kurz:"MEM",name:"Meropenem",sub:"meropenem"},
+ {kurz:"CIP",name:"Ciprofloxacin",sub:"ciprofloxacin"},
+ {kurz:"LEV",name:"Levofloxacin",sub:null},
+ {kurz:"GEN",name:"Gentamicin",sub:"gentamicin"},
+ {kurz:"VAN",name:"Vancomycin",sub:"vancomycin"},
+ {kurz:"CLI",name:"Clindamycin",sub:"clindamycin"},
+ {kurz:"RAM",name:"Rifampicin",sub:"rifampicin"},
+ {kurz:"LID",name:"Linezolid",sub:"linezolid"}
+];
+
+/* Zeilen: erreger = IDs aus ERREGER, die dieser Zeile zugeordnet sind */
+const RG_ZEILEN = [
+ {id:"rg_ecoli",name:"Escherichia coli",erreger:["ecoli"],
+  w:{FLU:null,AMX:"rot",ASU:"rot",PTB:"gelb",CXM:"gelb",CRO:"gruen",CAZ:"gruen",IMP:"gruen",MEM:"gruen",CIP:"gruen",LEV:null,GEN:"gruen",VAN:null,CLI:null,RAM:null,LID:null}},
+ {id:"rg_klebsiella",name:"Klebsiella-Raoultella species",erreger:["klebsiella"],
+  w:{FLU:null,AMX:"rot",ASU:"rot",PTB:"gelb",CXM:"gelb",CRO:"gruen",CAZ:"gruen",IMP:"gruen",MEM:"gruen",CIP:"gruen",LEV:null,GEN:"gruen",VAN:null,CLI:null,RAM:null,LID:null}},
+ {id:"rg_proteus",name:"Proteus / Providencia / Morganella species",erreger:["proteus"],
+  w:{FLU:null,AMX:"rot",ASU:"rot",PTB:"gruen",CXM:"gruen",CRO:"gruen",CAZ:"gruen",IMP:"gruen",MEM:"gruen",CIP:"gruen",LEV:null,GEN:"gruen",VAN:null,CLI:null,RAM:null,LID:null}},
+ {id:"rg_ampc",name:"Citrobacter / Serratia / Enterobacter u. a. Enterobacterales",erreger:["ampc"],
+  w:{FLU:null,AMX:"rot",ASU:"rot",PTB:"gelb",CXM:null,CRO:"gelb",CAZ:"gelb",IMP:"gruen",MEM:"gruen",CIP:"gruen",LEV:null,GEN:"gruen",VAN:null,CLI:null,RAM:null,LID:null}},
+ {id:"rg_pseudomonas",name:"Pseudomonas aeruginosa",erreger:["pseudomonas"],
+  w:{FLU:null,AMX:null,ASU:null,PTB:"gelb",CXM:null,CRO:null,CAZ:"gruen",IMP:"gelb",MEM:"gruen",CIP:"gruen",LEV:null,GEN:null,VAN:null,CLI:null,RAM:null,LID:null}},
+ {id:"rg_saureus",name:"Staphylococcus aureus",erreger:["mssa","mrsa"],
+  w:{FLU:"gruen",AMX:null,ASU:"gruen",PTB:"gruen",CXM:"gruen",CRO:null,CAZ:null,IMP:"gruen",MEM:"gruen",CIP:null,LEV:"gruen",GEN:"gruen",VAN:"gruen",CLI:"rot",RAM:"gruen",LID:"gruen"}},
+ {id:"rg_efaecium",name:"Enterococcus faecium",erreger:["efaecium","vre"],
+  w:{FLU:null,AMX:"rot",ASU:"rot",PTB:"rot",CXM:null,CRO:null,CAZ:null,IMP:"rot",MEM:null,CIP:null,LEV:"rot",GEN:null,VAN:"gruen",CLI:null,RAM:null,LID:"gruen"}},
+ {id:"rg_efaecalis",name:"Enterococcus faecalis",erreger:["efaecalis"],
+  w:{FLU:null,AMX:"gruen",ASU:"gruen",PTB:"gruen",CXM:null,CRO:null,CAZ:null,IMP:"gruen",MEM:null,CIP:null,LEV:"gruen",GEN:null,VAN:"gruen",CLI:null,RAM:null,LID:"gruen"}},
+ {id:"rg_kns",name:"Koagulase-negative Staphylokokken",erreger:["kns"],
+  w:{FLU:"rot",AMX:null,ASU:"rot",PTB:"rot",CXM:"rot",CRO:null,CAZ:null,IMP:"rot",MEM:"rot",CIP:null,LEV:"rot",GEN:"gelb",VAN:"gruen",CLI:"rot",RAM:"gruen",LID:"gruen"}}
+];
+
+/* Klinische Konsequenzen, die sich aus diesem Resistogramm für das Haus ergeben */
+const RG_BEFUNDE = [
+ {titel:"Ampicillin/Sulbactam trägt gramnegativ nicht mehr",
+  text:"Gegen E. coli, Klebsiella und Proteus liegt die Wirksamkeit unter 80 %. Als kalkulierte Monotherapie bei Sepsis mit gramnegativem Fokus ist die Substanz damit nicht vertretbar — sie bleibt brauchbar bei grampositivem Fokus (S. aureus grün) und in leichten, ambulant erworbenen Situationen.",
+  foki:["peritonitis_ambulant","aspiration","phlegmone","pleuraempyem","ssi","sectio_infektion"],subs:["ampsulb"],stufe:"rot"},
+ {titel:"Piperacillin/Tazobactam liegt gramnegativ im gelben Bereich",
+  text:"Bei E. coli, Klebsiella, der AmpC-Gruppe und Pseudomonas jeweils 80 bis 89 %. Für die kalkulierte Therapie einer schweren Sepsis heißt das: etwa jeder achte Patient bekommt initial keine wirksame Substanz. Bei septischem Schock ist ein Carbapenem oder eine Kombination die sicherere Wahl.",
+  foki:["urosepsis","peritonitis_post","sepsis_unklar","hap_mre","cholangitis"],subs:["piptazo","meropenem"],stufe:"gelb"},
+ {titel:"Ceftriaxon ist gramnegativ stark — außer bei AmpC",
+  text:"Grün bei E. coli, Klebsiella und Proteus, aber nur gelb bei Citrobacter, Serratia und Enterobacter. Das bestätigt die AmpC-Regel: dort Cefepim oder Carbapenem statt Cephalosporin der Gruppe 3.",
+  foki:["scap","sbp","meningitis","hap_ohne"],subs:["ceftriaxon","cefepim"],stufe:"gruen"},
+ {titel:"Bei Pseudomonas ist Ceftazidim im Haus die stärkste Betalaktam-Option",
+  text:"Ceftazidim und Meropenem grün, Piperacillin/Tazobactam und Imipenem nur gelb. Die S3 020-013 rät von Ceftazidim wegen der Lücken im grampositiven Bereich und der Selektionsgefahr ab — bei gesichertem Pseudomonas und passendem Antibiogramm ist es hier lokal dennoch die verlässlichere Wahl als Pip/Tazo. Ciprofloxacin ist grün und damit als Kombinationspartner brauchbar.",
+  foki:["hap_mre","verbrennung","urosepsis"],subs:["ceftazidim","meropenem","ciprofloxacin"],stufe:"gelb"},
+ {titel:"Clindamycin wirkt bei S. aureus im Haus unter 80 %",
+  text:"Für die Toxinsuppression bei nekrotisierender Fasciitis und STSS bleibt Clindamycin trotzdem der etablierte Partner — dort zielt es auf Streptococcus pyogenes, der in diesem Resistogramm nicht ausgewertet ist. Als antistaphylokokkale Substanz taugt es im Haus jedoch nicht, und bei Verdacht auf S. aureus muss die Abdeckung anders erfolgen. Empfindlichkeit im Einzelfall austesten lassen.",
+  foki:["nekrot_fasziitis","gas_peripartal","dfs","osteomyelitis"],subs:["clindamycin","linezolid","vancomycin"],stufe:"rot"},
+ {titel:"S. aureus ist im Haus gut behandelbar",
+  text:"Flucloxacillin grün — der MRSA-Anteil liegt damit im niedrigen Bereich. Vancomycin, Rifampicin, Linezolid und Gentamicin ebenfalls grün. Bei S.-aureus-Bakteriämie ist Flucloxacillin also nicht nur leitliniengerecht, sondern lokal auch verlässlich wirksam.",
+  foki:["sab","endokarditis_nativ","mastitis","osteomyelitis"],subs:["flucloxacillin","vancomycin"],stufe:"gruen"},
+ {titel:"Kein relevantes VRE-Problem",
+  text:"Vancomycin und Linezolid sind bei E. faecium grün. Die kalkulierte Linezolid-Gabe allein wegen VRE-Sorge ist im Haus derzeit nicht begründet — Linezolid bleibt indiziert bei Ampicillin-resistentem E. faecium, denn AMX, ASU, PTB und Imipenem sind dort rot.",
+  foki:["peritonitis_post","enterokokken_bakteriaemie","crbsi"],subs:["vancomycin","linezolid"],stufe:"gruen"},
+ {titel:"E. faecalis: Ampicillin funktioniert",
+  text:"Alle getesteten Substanzen grün, einschließlich Ampicillin und Ampicillin/Sulbactam. Die gezielte Schmalspektrumtherapie ist hier die richtige Wahl.",
+  foki:["enterokokken_bakteriaemie","endokarditis_nativ","cholangitis"],subs:["ampicillin"],stufe:"gruen"},
+ {titel:"Koagulasenegative Staphylokokken sind fast durchgängig resistent",
+  text:"Flucloxacillin, Ampicillin/Sulbactam, Pip/Tazo, Cefuroxim, Carbapeneme und Clindamycin alle rot, Gentamicin gelb. Verlässlich bleiben Vancomycin, Rifampicin und Linezolid. Bei Fremdmaterialinfektionen mit KNS ist die kalkulierte Betalaktamtherapie damit wirkungslos — Glykopeptid oder Linezolid, plus Materialentfernung.",
+  foki:["crbsi","protheseninfektion","ventrikulitis","mediastinitis","gefaessprothese"],subs:["vancomycin","linezolid","rifampicin"],stufe:"rot"}
+];
+
+/* Ceftazidim — im Resistogramm geführt, deshalb als Substanzkarte ergänzt */
+const SUBSTANZEN3 = [
+{id:"ceftazidim",name:"Ceftazidim",klasse:"Cephalosporin Gruppe 3b",haus:"erweitert",
+ deckt:["Pseudomonas aeruginosa","Enterobacterales ohne ESBL/AmpC","Haemophilus"],
+ decktNicht:["Staphylokokken (auch MSSA nur schwach)","Enterokokken","Anaerobier","MRSA","ESBL","atypische Erreger"],
+ pkpd:"Zeitabhängig. Prolongierte oder kontinuierliche Infusion sinnvoll.",
+ dosis:[["Standard","2 g alle 8 h"],["Pseudomonas / schwer","2 g alle 8 h, Infusion über 3 h"],["GFR 30–50","2 g alle 12 h"],["GFR 15–30","2 g alle 24 h"],["CRRT","2 g alle 12 h (ungeprüft)"]],
+ tdm:"Wie bei anderen Betalaktamen bei augmentierter Clearance, CRRT und hoher MHK sinnvoll.",
+ pen:{liquor_ne:"schlecht",liquor_e:"maessig",lunge:"gut",pleura:"maessig",peritoneum:"gut",galle:"maessig",pankreas:"maessig",nierenparenchym:"gut",urin:"gut",prostata:"schlecht",knochen:"maessig",gelenk:"gut",vegetation:"maessig",abszess:"maessig",weichteil:"gut",eschar:"schlecht",biofilm:"schlecht",auge:"maessig"},
+ fallstricke:["Die S3 020-013 empfiehlt Ceftazidim nicht mehr — Grund sind die grampositive Lücke und die Selektionsgefahr. Im Hausresistogramm ist es bei Pseudomonas mit 90 bis 100 % dennoch die stärkste Betalaktam-Option, stärker als Pip/Tazo und Imipenem.","Keine Wirkung gegen Staphylokokken: bei gemischtem Verdacht immer Partnersubstanz.","Keine Anaerobierwirkung — bei abdominellem Fokus Metronidazol ergänzen.","Selektiert AmpC-Bildner und ESBL."],
+ evidenz:"solide"}
+];
+
+const NEU_WIRK3 = {
+ ceftazidim:{gut:["pseudomonas","ecoli","klebsiella","proteus","hinfluenzae"],
+   eingeschraenkt:["ampc","acinetobacter"]}
+};
+
+/* ---------- Hausreferenzen ---------- */
+const HAUSREFERENZEN = [
+ {titel:"Wiener Liste — Dosierung parenteraler Antibiotika",
+  quelle:"Modifiziert nach Kompendium der antimikrobiellen Therapie, Thalhammer/Grabein, 3. Auflage 2008. Basierend auf 70 kg Körpergewicht.",
+  nutzen:"Hängt auf Station und ist die gewohnte Referenz für Dosierungen bei normaler und eingeschränkter Nierenfunktion, intermittierender Hämodialyse und kontinuierlicher Hämofiltration.",
+  abweichungen:[
+   {sub:"vancomycin",wiener:"2 × 1,0–2,0 g nach Talspiegel",app:"Loading 25–30 mg/kg, dann AUC-gesteuert mit Ziel-AUC 400–600 mg·h/l",grund:"Die Talspiegelsteuerung gilt als überholt; das frühere Ziel von 15–20 mg/l erhöht das AKI-Risiko."},
+   {sub:"daptomycin",wiener:"1 × 4–6 mg/kg",app:"8–10 mg/kg bei Bakteriämie und Endokarditis",grund:"Höhere Dosierungen sind seit Erscheinen der Liste Standard bei tiefen Infektionen."},
+   {sub:"fosfomycin",wiener:"3 × 3,0–5,0 g",app:"mindestens 12 g/d, bei ZNS-Infektion 16–24 g/d",grund:"EMA-Harmonisierung 2020 mit angehobener Minimaldosierung."},
+   {sub:"meropenem",wiener:"3 × 0,5–2,0 g",app:"1 g alle 8 h, bei ZNS und Pseudomonas 2 g alle 8 h über 3 h",grund:"Prolongierte Infusion und Hochdosis bei schwerer Infektion sind neuer als die Liste."}],
+  hinweis:"Die Liste ist von 2008. Wo diese App abweicht, folgt sie neuerer Evidenz — die Abweichung ist oben begründet. Für alles Übrige decken sich beide."},
+ {titel:"Antiinfektiva-Aktivität bei klinisch wichtigen Infektionserregern (Pfizer-Poster)",
+  quelle:"Modifiziert nach Hof Antibiotika Pocketcard 2010, Thalhammer/Grabein, PEG-Resistenzstudie, GENARS, ARS, GERMAP.",
+  nutzen:"Generische Erreger-Wirkstoff-Matrix über Bakterien und Pilze — dieselbe Systematik wie der Erregerteil dieser App, nur ohne lokale Daten.",
+  abweichungen:[],
+  hinweis:"Als allgemeine Orientierung deckungsgleich mit der hier hinterlegten Matrix. Wo lokale Daten vorliegen, geht das Hausresistogramm vor."}
+];
+
+
+/* Fälle, in denen ein roter oder gelber Resistogrammwert nicht gegen die Empfehlung spricht */
+const RG_AUSNAHMEN = {
+ nekrot_fasziitis:{clindamycin:"Clindamycin zielt hier auf die Toxinproduktion von Streptococcus pyogenes, der in diesem Resistogramm nicht ausgewertet ist. Die schwache Wirkung gegen S. aureus bedeutet nur, dass die staphylokokkale Abdeckung durch die Partnersubstanz erfolgen muss — sie entwertet die Toxinsuppression nicht."},
+ gas_peripartal:{clindamycin:"Gleiches gilt hier: die Substanz wird wegen der Toxinsuppression bei GAS gegeben, nicht als antistaphylokokkale Therapie."},
+ crbsi:{piptazo:"Die schwachen Werte betreffen koagulasenegative Staphylokokken und E. faecium — für diese Flanke ist ohnehin Vancomycin oder Linezolid vorgesehen. Piperacillin/Tazobactam deckt hier den gramnegativen Anteil ab."},
+ sepsis_unklar:{piptazo:"Im septischen Schock ist die gelbe Bewertung der Grund, ein Carbapenem vorzuziehen; ohne Schock und ohne MRE-Risiko bleibt Pip/Tazo vertretbar."}
+};
+
 
 /* ---------- Daten zusammenführen ---------- */
-const ALLE_SUBS = SUBSTANZEN.concat(SUBSTANZEN2);
+const ALLE_SUBS = SUBSTANZEN.concat(SUBSTANZEN2).concat(typeof SUBSTANZEN3!=='undefined'?SUBSTANZEN3:[]);
 const ALLE_FOKI = FOKI.concat(FOKI2);
 // Wirksamkeit der Welle-2-Substanzen in die Erregermatrix expandieren
 ERREGER.forEach(e=>{
-  SUBSTANZEN2.forEach(s=>{
-    const m = NEU_WIRK[s.id]||{};
+  SUBSTANZEN2.concat(typeof SUBSTANZEN3!=='undefined'?SUBSTANZEN3:[]).forEach(s=>{
+    const m = (NEU_WIRK[s.id]) || (typeof NEU_WIRK3!=='undefined'?NEU_WIRK3[s.id]:null) || {};
     let v='unwirksam';
     if((m.gut||[]).includes(e.id)) v='gut';
     else if((m.eingeschraenkt||[]).includes(e.id)) v='eingeschraenkt';
@@ -1748,7 +1904,9 @@ function viewHome(){
       <button onclick="go('#/komp')">Kompartimente</button>
       <button onclick="go('#/kombi')">Kombinationen</button>
       <button onclick="go('#/abs')">Stewardship</button>
-      <button onclick="go('#/resistenz')">Resistenzlage</button>
+      <button onclick="go('#/resistogramm')">Hausresistogramm</button>
+      <button onclick="go('#/resistenz')">Eigene Werte</button>
+      <button onclick="go('#/referenzen')">Referenzen</button>
       <button onclick="go('#/hausstandard')">Hausstandard</button>
       <button onclick="go('#/schwanger')">Schwangerschaft</button>
       <button onclick="go('#/abk')">Abkürzungen</button>
@@ -1772,6 +1930,8 @@ function searchIndex(){
   ERREGER.forEach(e=>i.push({t:e.name,s:e.gruppe,h:'#/err/'+e.id,k:(e.name+' '+e.kurz+' '+e.gruppe+' '+e.res.join(' ')).toLowerCase()}));
   KOMPARTIMENTE.forEach(k=>i.push({t:k.name,s:'Kompartiment',h:'#/komp/'+k.id,k:(k.name+' '+k.barriere).toLowerCase()}));
   ABK.forEach(a=>i.push({t:a[0],s:'Abkürzung: '+a[1],h:'#/abk',k:(a[0]+' '+a[1]).toLowerCase()}));
+  RG_ZEILEN.forEach(z=>i.push({t:z.name,s:'Hausresistogramm',h:'#/resistogramm',k:(z.name+' resistogramm resistenz').toLowerCase()}));
+  RG_BEFUNDE.forEach(b=>i.push({t:b.titel,s:'Hausresistogramm',h:'#/resistogramm',k:(b.titel+' '+b.text).toLowerCase()}));
   return i;
 }
 function suggest(v){
@@ -1834,7 +1994,7 @@ const KAT={
  penicillin:'Penicilline',ampicillin:'Penicilline',flucloxacillin:'Penicilline',
  ampsulb:'Penicilline',piptazo:'Penicilline',
  cefazolin:'Cephalosporine',cefuroxim:'Cephalosporine',ceftriaxon:'Cephalosporine',
- cefepim:'Cephalosporine',ceftazidim_avibactam:'Cephalosporine',cefiderocol:'Cephalosporine',
+ cefepim:'Cephalosporine',ceftazidim:'Cephalosporine',ceftazidim_avibactam:'Cephalosporine',cefiderocol:'Cephalosporine',
  meropenem:'Carbapeneme',
  vancomycin:'Grampositiv wirksam',linezolid:'Grampositiv wirksam',daptomycin:'Grampositiv wirksam',
  clindamycin:'Grampositiv wirksam',rifampicin:'Grampositiv wirksam',
@@ -1937,6 +2097,14 @@ function viewSub(id){
       <ul>${s.fallstricke.map(f=>`<li>${ungepr(esc(f))}</li>`).join('')}</ul></div>
     ${unt.length?`<div class="card"><h3>Trotz Antibiogramm ungeeignet</h3>
       <div class="chips">${unt.map(e=>`<button class="chip" onclick="go('#/err/${e.id}')"><span class="amp untauglich">✕</span>${esc(e.kurz)}</button>`).join('')}</div></div>`:''}
+    ${(()=>{const rows=RG_ZEILEN.filter(z=>z.w[(rgSpalteFuerSub(s.id)||{}).kurz]);
+      if(!rgSpalteFuerSub(s.id)||!rows.length) return '';
+      const c=rgSpalteFuerSub(s.id);
+      return `<div class="card"><h3>Wirksamkeit im Hausresistogramm</h3>
+        ${rows.map(z=>`<button class="penrow" onclick="${z.erreger.length?`go('#/err/${z.erreger[0]}')`:''}">
+          <span>${esc(z.name)}</span>
+          <span class="penval">${sq(z.w[c.kurz])}<span class="ampw">${esc(RG_WORT[z.w[c.kurz]])}</span></span></button>`).join('')}
+        <p class="note">Stand ${esc(RG_META.stand)} · <button class="chip" onclick="go('#/resistogramm')">ganzes Resistogramm</button></p></div>`})()}
     <div class="card"><h3>Wirksam gegen</h3>
       <div class="chips">${wirkt.map(e=>`<button class="chip" onclick="go('#/err/${e.id}')"><span class="amp ${e.w[id]}">${AMPEL[e.w[id]]}</span>${esc(e.kurz)}</button>`).join('')||'<span class="note">Keine bakteriellen Erreger hinterlegt.</span>'}</div></div>
     ${foki.length?`<div class="card"><h3>Vorgeschlagen bei</h3>
@@ -1969,11 +2137,15 @@ function viewErr(id){
     <h1>${esc(e.name)}</h1>
     ${e.res.length?`<div class="chips" style="margin-top:10px">${e.res.map(r=>`<span class="chip plain">${esc(r)}</span>`).join('')}</div>`:''}
     <div class="card"><h3>Wirksamkeit</h3>
-      ${rel.map(s=>`<button class="penrow" onclick="go('#/sub/${s.id}')">
-        <span>${esc(s.name)}${s.haus==='erweitert'?' <span class="badge ext">kein Hausstandard</span>':''}</span>
-        ${amp(e.w[s.id],WIRK_WORT)}</button>`).join('')}
+      ${rel.map(s=>{const lv=rgWert(e.id,s.id);
+        return `<button class="penrow" onclick="go('#/sub/${s.id}')">
+        <span>${esc(s.name)}${s.haus==='erweitert'?' <span class="badge ext">kein Hausstandard</span>':''}
+        ${lv?`<br><span class="lokal">${sq(lv)} im Haus ${esc(RG_WORT[lv])}</span>`:''}</span>
+        ${amp(e.w[s.id],WIRK_WORT)}</button>`}).join('')}
       ${wirkLegend()}
-      <p class="note">Ohne Eintrag: unwirksam. ${ALLE_SUBS.length-rel.length} weitere Substanzen sind hier ohne Ansatzpunkt.</p></div>
+      <p class="note">Ohne Eintrag: unwirksam. ${ALLE_SUBS.length-rel.length} weitere Substanzen sind hier ohne Ansatzpunkt.
+      ${rgZeileFuerErreger(e.id)?`Die Zeile <b>${esc(rgZeileFuerErreger(e.id).name)}</b> des Hausresistogramms ist diesem Erreger zugeordnet.
+        <button class="chip" onclick="go('#/resistogramm')" style="margin-left:4px">Resistogramm</button>`:'Für diesen Erreger liegen keine lokalen Daten vor.'}</p></div>
     <div class="card"><h3>Worauf es ankommt</h3>
       <ul>${e.hinweise.map(h=>`<li>${ungepr(esc(h))}</li>`).join('')}</ul></div>
     ${foki.length?`<div class="card"><h3>Typische Foki</h3>
@@ -2000,6 +2172,7 @@ function viewFokus(id){
           return s?`<button class="chip ${s.haus==='erweitert'?'ext':''}" onclick="go('#/sub/${s.id}')">${esc(s.name)}</button>`:''}).join('')}</div>`:''}
         <p>${ungepr(esc(t.text))}</p></div>`).join('')}
       <p class="note">Gestrichelt umrandete Substanzen sind leitliniengerecht, gehören aber nicht zu den zwölf im Haus üblichen.</p></div>
+    ${rgBanner(f)}
     ${resBanner(f.id)}
     <div class="card"><h3>Kombination</h3><p>${ungepr(esc(f.kombi))}</p></div>
     ${f.adjunkte&&f.adjunkte.length?`<div class="card"><h3>Begleittherapie</h3>
@@ -2114,7 +2287,7 @@ function viewUeber(){
     const o=document.getElementById('offl'); if(!o) return;
     if(location.protocol==='file:') o.textContent='nicht nötig — lokale Datei';
     else if(navigator.serviceWorker && navigator.serviceWorker.controller) o.textContent='aktiv — App ist gespeichert';
-    else o.textContent='Browser-Cache (ohne sw.js)';
+    else o.textContent='Browser-Cache';
   },60);
   const ext=ALLE_SUBS.filter(s=>s.haus==='erweitert').length;
   app.innerHTML=`<h1>Über diese App</h1>
@@ -2131,9 +2304,102 @@ function viewUeber(){
       <p>Kein Ersatz für Antibiogramm, Leitlinie, Mikrobiologie und klinisches Urteil.</p></div>
     <div class="card"><h3>Version und Speicherung</h3>
       <dl class="dl"><dt>App-Version</dt><dd id="vers">—</dd>
-      <dt>Offline-Cache</dt><dd id="offl">wird geprüft …</dd></dl>
-      <p class="note">Die gesamte App steckt in dieser einen Datei — Daten, Bilder und Oberfläche. Favoriten, Resistenzwerte und Einstellungen bleiben auf diesem Gerät und werden nirgends übertragen.</p></div>
+      <dt>Offline</dt><dd id="offl">wird geprüft …</dd></dl>
+      <p class="note">Favoriten, eingetragene Werte und Einstellungen bleiben auf diesem Gerät und werden nirgends übertragen.</p></div>
     <p class="foot">Stand: September 2026. Grundlagen unter anderem S3 020-013 (2024), S3 067/011 (02/2026), S2k 030-089, ESC 2023, DGVS S2k, BALANCE, STOP-IT, MERINO, Cochrane CD001067.</p>`;
+  window.scrollTo(0,0);
+}
+
+/* ---------- Hausresistogramm ---------- */
+const RG_WORT={gruen:"90–100 % wirksam",gelb:"80–89 % wirksam",rot:"unter 80 % wirksam"};
+function rgZeileFuerErreger(eid){return RG_ZEILEN.find(z=>z.erreger.includes(eid));}
+function rgSpalteFuerSub(sid){return RG_SPALTEN.find(c=>c.sub===sid);}
+function rgWert(eid,sid){
+  const z=rgZeileFuerErreger(eid), c=rgSpalteFuerSub(sid);
+  if(!z||!c) return null;
+  return z.w[c.kurz]||null;
+}
+function sq(v){return `<span class="sq ${v||'leer'}" title="${v?RG_WORT[v]:'nicht ausgewertet'}"></span>`;}
+/* Abgleich: welche vorgeschlagenen Substanzen sind lokal schwach gegen häufige Erreger dieses Fokus? */
+function rgAbgleich(f){
+  const treffer=[];
+  const subs=[...new Set((f.therapie||[]).flatMap(t=>t.subs||[]))];
+  subs.forEach(sid=>{
+    (f.erreger||[]).filter(e=>e.h!=='selten').forEach(e=>{
+      const v=rgWert(e.id,sid);
+      if(v==='rot'||v==='gelb'){
+        const er=byId(ERREGER,e.id), su=byId(ALLE_SUBS,sid);
+        if(er&&su) treffer.push({sid,eid:e.id,v,sub:su.name,err:er.kurz,h:e.h});
+      }
+    });
+  });
+  return treffer.sort((a,b)=>(a.v==='rot'?0:1)-(b.v==='rot'?0:1));
+}
+function rgBanner(f){
+  const t=rgAbgleich(f); if(!t.length) return '';
+  const rot=t.filter(x=>x.v==='rot'), gelb=t.filter(x=>x.v==='gelb');
+  return `<div class="card ${rot.length?'warn':''}"><h3>Abgleich mit dem Hausresistogramm</h3>
+    ${rot.length?`<div class="rgcard rot"><b>Lokal unter 80 % wirksam</b>
+      <ul style="margin:0;padding-left:18px;font-size:14.5px">${rot.map(x=>
+        `<li>${esc(x.sub)} gegen <b>${esc(x.err)}</b> (${HAEUF[x.h]}er Erreger dieses Fokus)</li>`).join('')}</ul></div>`:''}
+    ${gelb.length?`<div class="rgcard gelb"><b>Lokal 80–89 % wirksam</b>
+      <ul style="margin:0;padding-left:18px;font-size:14.5px">${gelb.map(x=>
+        `<li>${esc(x.sub)} gegen <b>${esc(x.err)}</b> (${HAEUF[x.h]})</li>`).join('')}</ul></div>`:''}
+    ${(()=>{const ex=(typeof RG_AUSNAHMEN!=='undefined'?RG_AUSNAHMEN[f.id]:null)||{};
+      const keys=Object.keys(ex).filter(k=>t.some(x=>x.sid===k));
+      return keys.length?keys.map(k=>{const s2=byId(ALLE_SUBS,k);
+        return `<div class="rgcard gruen"><b>Einordnung: ${esc(s2?s2.name:k)}</b>
+          <p style="margin:0;font-size:14.5px">${esc(ex[k])}</p></div>`}).join(''):''})()}
+    <p class="note">Stand ${esc(RG_META.stand)}, Auswertung ${esc(RG_META.auswertung)}, alle klinischen Materialien des Hauses — auf der Intensivstation ist mit ungünstigeren Werten zu rechnen.
+      <button class="chip" onclick="go('#/resistogramm')" style="margin-left:6px">Resistogramm</button></p></div>`;
+}
+function viewResistogramm(){
+  renderBar('Hausresistogramm',null);
+  app.innerHTML=`<h1>Hausresistogramm</h1>
+    <p class="lede">Kurzübersicht Antibiotikawirksamkeit des Hauses. Die Werte gehen automatisch in den Abgleich auf jeder Fokusseite ein.</p>
+    <div class="card"><h3>Wirksamkeit in Prozent der Isolate</h3>
+      <div class="rgwrap"><table class="rg"><thead><tr><th class="er">Erregergruppe</th>
+        ${RG_SPALTEN.map(c=>`<th title="${esc(c.name)}">${esc(c.kurz)}</th>`).join('')}</tr></thead>
+        <tbody>${RG_ZEILEN.map(z=>`<tr>
+          <td class="er">${z.erreger.length&&byId(ERREGER,z.erreger[0])
+            ?`<a onclick="go('#/err/${z.erreger[0]}')">${esc(z.name)}</a>`:esc(z.name)}</td>
+          ${RG_SPALTEN.map(c=>`<td>${sq(z.w[c.kurz])}</td>`).join('')}</tr>`).join('')}
+        </tbody></table></div>
+      <div class="rglegend"><span>${sq('gruen')} 90–100 %</span><span>${sq('gelb')} 80–89 %</span>
+        <span>${sq('rot')} unter 80 %</span><span>${sq(null)} nicht ausgewertet</span></div>
+      <p class="note">Spalten: ${RG_SPALTEN.map(c=>esc(c.kurz)+' = '+esc(c.name)).join(' · ')}</p></div>
+    <div class="card"><h3>Was daraus folgt</h3>
+      ${RG_BEFUNDE.map(b=>`<div class="rgcard ${b.stufe}"><b>${esc(b.titel)}</b>
+        <p style="margin:0 0 8px;font-size:14.5px">${esc(b.text)}</p>
+        <div class="chips">${(b.subs||[]).map(sid=>{const s2=byId(ALLE_SUBS,sid);
+          return s2?`<button class="chip ${s2.haus==='erweitert'?'ext':''}" onclick="go('#/sub/${s2.id}')">${esc(s2.name)}</button>`:''}).join('')}</div>
+        <div class="chips" style="margin-top:6px">${(b.foki||[]).slice(0,4).map(fid=>{const fk=byId(ALLE_FOKI,fid);
+          return fk?`<button class="chip" onclick="go('#/fokus/${fk.id}')">${esc(fk.name)}</button>`:''}).join('')}</div></div>`).join('')}</div>
+    <div class="card"><h3>Herkunft der Daten</h3>
+      <dl class="dl"><dt>Labor</dt><dd>${esc(RG_META.quelle)}</dd>
+      <dt>Haus</dt><dd>${esc(RG_META.haus)}</dd>
+      <dt>Auswertung</dt><dd>${esc(RG_META.auswertung)}</dd>
+      <dt>Stand</dt><dd>${esc(RG_META.stand)}</dd>
+      <dt>Material</dt><dd>${esc(RG_META.material)}</dd></dl>
+      <ul style="margin-top:12px">${RG_META.hinweise.map(h=>`<li>${esc(h)}</li>`).join('')}</ul></div>
+    <p class="foot"><button class="chip" onclick="go('#/referenzen')">Hausreferenzen</button>
+      <button class="chip" onclick="go('#/resistenz')">Eigene Werte eintragen</button></p>`;
+  window.scrollTo(0,0);
+}
+function viewReferenzen(){
+  renderBar('Hausreferenzen',null);
+  app.innerHTML=`<h1>Hausreferenzen</h1>
+    <p class="lede">Die auf Station verfügbaren Übersichten und ihr Verhältnis zu den Angaben dieser App.</p>
+    ${HAUSREFERENZEN.map(r=>`<div class="card"><h3>${esc(r.titel)}</h3>
+      <p class="note" style="margin:0 0 10px">${esc(r.quelle)}</p>
+      <p>${esc(r.nutzen)}</p>
+      ${r.abweichungen.length?`<h3 style="margin-top:16px">Wo diese App abweicht</h3>
+        ${r.abweichungen.map(a=>{const s2=byId(ALLE_SUBS,a.sub);
+          return `<div class="ther"><b>${esc(s2?s2.name:a.sub)}</b>
+            <dl class="dl" style="margin-top:6px"><dt>Referenz</dt><dd>${esc(a.wiener)}</dd>
+            <dt>Diese App</dt><dd>${esc(a.app)}</dd><dt>Grund</dt><dd>${esc(a.grund)}</dd></dl>
+            ${s2?`<p style="margin-top:8px"><button class="chip" onclick="go('#/sub/${s2.id}')">Substanzkarte</button></p>`:''}</div>`}).join('')}`:''}
+      <p class="note" style="margin-top:12px">${esc(r.hinweis)}</p></div>`).join('')}`;
   window.scrollTo(0,0);
 }
 
@@ -2212,7 +2478,8 @@ function viewAbs(){
         <td>${ungepr(esc(f.dauer.split('.')[0]))}.</td></tr>`).join('')}</tbody></table></div>
     <div class="card"><h3>Lokale Resistenzlage</h3>
       <p>${tr.length?`${tr.length} Schwelle${tr.length>1?'n':''} überschritten — die Hinweise erscheinen auf den betroffenen Fokusseiten.`:'Noch keine Werte eingetragen.'}</p>
-      <p><button class="chip" onclick="go('#/resistenz')">Resistenzplan eintragen</button></p></div>
+      <p><button class="chip" onclick="go('#/resistogramm')">Hausresistogramm</button>
+        <button class="chip" onclick="go('#/resistenz')">Eigene Werte eintragen</button></p></div>
     <div class="card"><h3>Hausinterne Vorgaben</h3>
       <p class="note">Hier fehlen noch: hauseigene Freigabepflichten für Reservesubstanzen, Meldewege, ABS-Visitenrhythmus und die verbindlichen Standardtherapiedauern des Hauses. Sobald das ABS-Dokument vorliegt, wird dieser Abschnitt damit gefüllt und die Fokusseiten werden gegen die Hausvorgaben gespiegelt.</p></div>`;
   window.scrollTo(0,0);
@@ -2230,6 +2497,7 @@ function route(){
     case 'kombi':return viewKombi(); case 'hausstandard':return viewHausstandard();
     case 'schwanger':return viewSchwanger(); case 'abk':return viewAbk();
     case 'abs':return viewAbs(); case 'resistenz':return viewResistenz();
+    case 'resistogramm':return viewResistogramm(); case 'referenzen':return viewReferenzen();
     case 'ueber':return viewUeber(); default:return viewHome();
   }
 }
@@ -2237,17 +2505,9 @@ window.addEventListener('hashchange',route);
 window.addEventListener('scroll',()=>{document.getElementById('hdr').classList.toggle('scrolled',window.scrollY>4)},{passive:true});
 route();
 
-/* Version und optionaler Offline-Cache.
-   Die App läuft vollständig aus dieser einen Datei. Liegt zusätzlich eine sw.js
-   im selben Verzeichnis, wird sie registriert und die App ist garantiert offline
-   verfügbar; fehlt sie, passiert nichts weiter. */
-const APP_VERSION = 'v1';
+const APP_VERSION = 'v2 — Hausresistogramm';
 if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-  window.addEventListener('load', () => {
-    fetch('./sw.js', {method:'HEAD'})
-      .then(r => { if (r.ok) return navigator.serviceWorker.register('./sw.js'); })
-      .catch(() => {});
-  });
+  window.addEventListener('load', () => { navigator.serviceWorker.register('./sw.js').catch(()=>{}); });
 }
 </script>
 </body>
