@@ -1,6 +1,6 @@
 /* Service Worker — infektio
    Update: VERSION hochzählen, dann index.html hochladen. */
-const VERSION = 'infektio-v4-5';
+const VERSION = 'infektio-v4-6';
 const CORE = [
   './',
   './index.html',
